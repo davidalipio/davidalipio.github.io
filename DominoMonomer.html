@@ -1,0 +1,413 @@
+<!--
+ Oscillating Tableaux
+ 
+ Boilerplate code taken from Ananth Sridhar.
+ 
+ -->
+
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<title>Domino-Defect</title>
+<script type="text/javascript" src="./webgl-utils.js"></script>
+<script type="text/javascript" src="./glMatrix-0.9.5.min.js"></script>
+
+<script id="frag_draw_tex" type="x-shader/x-fragment">#version 300 es
+    precision mediump float;
+
+    // Tiling represented as a texture.
+    uniform sampler2D tex;
+
+    // Screen size
+    float ss = 512.0;
+
+    // Tiling size
+    float N = 17.0;
+    float M = 17.0;
+
+	out vec4 color;
+
+	void main(void) {
+        float car = texture(tex,vec2(gl_FragCoord.x,gl_FragCoord.y)/ss).x; // vec2 is the window relative pixel coordinates, dividing by ss gives texture coords between 0 and 1. We take the corresponding value from tiling and bind it to the texture tex. Then we look at its x value (ie what type of tile).
+
+        // how far away a pixel is from the center of a face (?)
+        float tx = fract(gl_FragCoord.x/(ss/N)); // fract(x) = x - floor(x).
+        float ty = fract(gl_FragCoord.y/(ss/M));
+
+        float q = 0.0;
+
+        if ( car >= .95 ) { // tM = 1.0
+          q = tx*(1.0-tx)*ty*(1.0-ty);
+        } else if ( car >= .75 ) { // tD = .9
+          q = tx*(2.0-tx)*ty*(1.0-ty);
+        } else if ( car >= .5 ){ // tC = .6
+          q = (1.0-tx)*(1.0+tx)*ty*(1.0-ty);
+        } else if ( car >= .25 ) { // tB = .3
+          q = tx*(1.0-tx)*(1.0-ty)*(1.0+ty);
+        } else { // tA = 0.0
+          q = tx*(1.0-tx)*ty*(2.0-ty);
+        }
+
+        q = smoothstep(0.04,0.05,q); // interpolates between first and second value, with parameter q
+
+        color = vec4(q*vec3(0.0,.5,.5),1.0); // output color
+        return;
+	}
+</script>
+
+<script id="vert_pass" type="x-shader/x-vertex">#version 300 es
+	precision mediump float;
+  layout(location = 0) in vec3 aVertexPosition;
+  void main(void) { gl_Position = vec4(aVertexPosition,1.0);  }
+</script>
+
+<script type="text/javascript">
+    var gl;
+    
+    var SVAO, SL;
+
+	var start_time =  new Date().getTime(); var last_rend_time = 0;
+
+	var sh_draw_tex;
+    
+    var tex;
+  
+    const N = 17;
+    const M = 17;
+
+    const tiling = new Uint8Array(4*N*M);
+
+    var t = 0;
+
+    var tA = 0; // bottom half vertical tile
+    var tB = Math.floor(.3*255); // top half vertical tile
+    var tC = Math.floor(.6*255); // right half horizontal tile
+    var tD = Math.floor(.9*255); // left half horizontal tile
+    var tM = 255;; // left half horizontal tile
+    var fc = 0;
+
+    function drawScene() {
+        t = (new Date().getTime() - start_time)/1000.0;
+
+
+        loadTextures();
+
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.useProgram(sh_draw_tex);
+        gl.uniform1i(gl.getUniformLocation(sh_draw_tex, "tex"), 0);
+        gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.bindVertexArray(SVAO);  gl.drawElements(gl.TRIANGLES, SL, gl.UNSIGNED_SHORT, 0);
+        gl.bindVertexArray(null);
+	}
+
+    function tick() {
+        for (var i = 0; i < 15; i++) {
+            mc();
+        }
+        setTimeout(function(){requestAnimFrame(tick); drawScene();}, 1000);
+        //requestAnimFrame(tick); drawScene();
+	}
+
+	function u01() {
+		return (Math.random()+Math.random()+Math.random()+Math.random())/4.0;
+	}
+
+	function make_shader(vertshader, fragshader) {
+		var sp = gl.createProgram();
+        gl.attachShader(sp, getShader(gl, vertshader)); gl.attachShader(sp, getShader(gl, fragshader));
+        gl.linkProgram(sp);
+		if (!gl.getProgramParameter(sp, gl.LINK_STATUS)) { alert("Could not initialise shaders"); }
+		return sp;
+	}
+
+    function initTiling() {
+
+        for (var i = 0; i < M; i++) {
+          for (var j = 0; j < N; j++) {
+            if ( i % 2 == 0) {
+                if (i != M-1) {
+                    tiling[4*(i*N+j)] = tA;
+                }
+                else {
+                    if (j!=0) {
+                        if (j % 2 == 0) {
+                            tiling[4*(i*N+j)] = tC;
+                        }
+                        else {
+                            tiling[4*(i*N+j)] = tD;
+                        }
+                    }
+                }
+            }
+            else {
+                if (i != M-1) {
+                    tiling[4*(i*N+j)] = tB;
+                } else {
+                    if (j!=0) {
+                        if (j % 2 == 0) {
+                            tiling[4*(i*N+j)] = tC;
+                        }
+                        else {
+                            tiling[4*(i*N+j)] = tD;
+                        }
+                    }
+                }
+            }
+          }
+        }
+        tiling[4*(M-1)*N] = tM;
+        
+        //for (var i = 0; i < 1000; i++) {
+            //mc();
+        //}
+
+    }
+
+    function rf1(i,j) { // clockwise
+        console.log("flip",i,j)
+        if (  tiling[4*(i*N+j)] == tD  &&
+              tiling[4*(i*N+j+1)] == tC  &&
+              tiling[4*((i+1)*N+j)] == tD &&
+              tiling[4*((i+1)*N+j+1)] == tC ) {
+            tiling[4*(i*N+j)] = tA;
+            tiling[4*(i*N+j+1)] = tA;
+            tiling[4*((i+1)*N+j)] = tB;
+            tiling[4*((i+1)*N+j+1)] = tB;
+        } else if ( tiling[4*(i*N+j)] == tA  &&
+                    tiling[4*(i*N+j+1)] == tA  &&
+                    tiling[4*((i+1)*N+j)] == tB &&
+                    tiling[4*((i+1)*N+j+1)] == tB ) {
+            tiling[4*(i*N+j)] = tD;
+            tiling[4*(i*N+j+1)] = tC;
+            tiling[4*((i+1)*N+j)] = tD;
+            tiling[4*((i+1)*N+j+1)] = tC;
+        } else if ( tiling[4*(i*N+j)] == tM  &&
+                  tiling[4*(i*N+j+1)] == tA  &&
+                  tiling[4*((i+1)*N+j+1)] == tB ) {
+            tiling[4*(i*N+j)] = tD;
+            tiling[4*(i*N+j+1)] = tC;
+            tiling[4*((i+1)*N+j+1)] = tM;
+        }  else if ( tiling[4*(i*N+j)] == tD  &&
+                    tiling[4*(i*N+j+1)] == tC  &&
+                    tiling[4*((i+1)*N+j)] == tM ) {
+            tiling[4*(i*N+j)] = tA;
+            tiling[4*(i*N+j+1)] = tM;
+            tiling[4*((i+1)*N+j)] = tB;
+        }  else if ( tiling[4*(i*N+j)] == tA  &&
+                    tiling[4*((i+1)*N+j)] == tB  &&
+                    tiling[4*((i+1)*N+j+1)] == tM ) {
+            tiling[4*(i*N+j)] = tM;
+            tiling[4*((i+1)*N+j)] = tD;
+            tiling[4*((i+1)*N+j+1)] = tC;
+        } else if ( tiling[4*((i+1)*N+j)] == tD  &&
+                   tiling[4*(i*N+j+1)] == tM  &&
+                   tiling[4*((i+1)*N+j+1)] == tC ) {
+            tiling[4*((i+1)*N+j)] = tM;
+            tiling[4*(i*N+j+1)] = tA;
+            tiling[4*((i+1)*N+j+1)] = tB;
+        }
+                   
+    }
+
+    function rf2(i,j) { // counter clockwise
+        console.log("flip",i,j)
+        if (  tiling[4*(i*N+j)] == tD  &&
+            tiling[4*(i*N+j+1)] == tC  &&
+            tiling[4*((i+1)*N+j)] == tD &&
+            tiling[4*((i+1)*N+j+1)] == tC ) {
+            tiling[4*(i*N+j)] = tA;
+            tiling[4*(i*N+j+1)] = tA;
+            tiling[4*((i+1)*N+j)] = tB;
+            tiling[4*((i+1)*N+j+1)] = tB;
+        } else if ( tiling[4*(i*N+j)] == tA  &&
+                   tiling[4*(i*N+j+1)] == tA  &&
+                   tiling[4*((i+1)*N+j)] == tB &&
+                   tiling[4*((i+1)*N+j+1)] == tB ) {
+            tiling[4*(i*N+j)] = tD;
+            tiling[4*(i*N+j+1)] = tC;
+            tiling[4*((i+1)*N+j)] = tD;
+            tiling[4*((i+1)*N+j+1)] = tC;
+        } else if ( tiling[4*(i*N+j)] == tD  &&
+                   tiling[4*(i*N+j+1)] == tC  &&
+                   tiling[4*((i+1)*N+j+1)] == tM ) {
+            tiling[4*(i*N+j)] = tM;
+            tiling[4*(i*N+j+1)] = tA;
+            tiling[4*((i+1)*N+j+1)] = tB;
+        }  else if ( tiling[4*(i*N+j)] == tM  &&
+                    tiling[4*((i+1)*N+j)] == tD  &&
+                    tiling[4*((i+1)*N+j+1)] == tC ) {
+            tiling[4*(i*N+j)] = tA;
+            tiling[4*((i+1)*N+j)] = tB;
+            tiling[4*((i+1)*N+j+1)] = tM;
+        }  else if ( tiling[4*(i*N+j)] == tA  &&
+                    tiling[4*((i+1)*N+j)] == tB  &&
+                    tiling[4*(i*N+j+1)] == tM ) {
+            tiling[4*(i*N+j)] = tD;
+            tiling[4*((i+1)*N+j)] = tM;
+            tiling[4*(i*N+j+1)] = tC;
+        } else if ( tiling[4*((i+1)*N+j)] == tM  &&
+                   tiling[4*(i*N+j+1)] == tA  &&
+                   tiling[4*((i+1)*N+j+1)] == tB ) {
+            tiling[4*((i+1)*N+j)] = tD;
+            tiling[4*(i*N+j+1)] = tM;
+            tiling[4*((i+1)*N+j+1)] = tC;
+        }
+                   
+    }
+
+                   
+
+    function mc() {
+        r = u01();
+        if ( r < .25 ) {
+            for (var i = 0; i < M-1; i++) {
+              for (var j = 0; j < N-1; j++) {
+                if ( (i+j) % 2 == 1) {
+                    if ( u01() < .5 )  {
+                        rf1(i,j);
+                    }
+                }
+              }
+            }
+        } else if ( r < .5 ) {
+            for (var i = 0; i < M-1; i++) {
+                for (var j = 0; j < N-1; j++) {
+                    if ( (i+j) % 2 == 1) {
+                        if ( u01() < .5 )  {
+                            rf2(i,j);
+                        }
+                    }
+                }
+            }
+        } else if ( r < .75 ) {
+            for (var i = 0; i < M-1; i++) {
+                for (var j = 0; j < N-1; j++) {
+                    if ( (i+j) % 2 == 0) {
+                        if ( u01() < .5 )  {
+                            rf1(i,j);
+                        }
+                    }
+                }
+            }
+        } else {
+            for (var i = 0; i < M-1; i++) {
+              for (var j = 0; j < N-1; j++) {
+                if ( (i+j) % 2 == 0) {
+                  if ( u01() < .5 )  {
+                    rf2(i,j);
+                  }
+                }
+              }
+            }
+        }
+
+    }
+
+	function loadShaders() {
+        sh_draw_tex = make_shader("vert_pass","frag_draw_tex");
+	}
+
+	function loadTextures() {
+		gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, N, M, 0, gl.RGBA, gl.UNSIGNED_BYTE, tiling);
+	}
+
+  function webGLStart() {
+        var canvas = document.getElementById("lesson01-canvas");
+
+		try {
+            gl = canvas.getContext("webgl2", { preserveDrawingBuffer: true });
+			gl.viewportWidth = canvas.width; gl.viewportHeight = canvas.height;
+        } catch (e) { }
+
+        if (!gl) { alert("Could not initialise WebGL, sorry :-("); }
+
+		gl.disable(gl.DEPTH_TEST);
+
+        tex = gl.createTexture();
+		gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, N, M, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+        initTiling();
+        loadShaders();
+
+		// square
+        vertices = [1.0, 1.0, 0.0, -1.0, 1.0, 0.0, 1.0, -1.0, 0.0, -1.0, -1.0, 0.0];
+		ebo = [0,1,2,1,2,3];
+
+		SVAO = gl.createVertexArray(); SL = 6;
+		gl.bindVertexArray(SVAO);
+		gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+		gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0); gl.enableVertexAttribArray(0);
+		gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,  new Uint16Array(ebo), gl.STATIC_DRAW);
+		gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+
+		document.onmousedown = handleMouseDown;
+		document.onmouseup = handleMouseUp;
+		document.onkeydown = handleKeyDown;
+		document.onmousemove = handleMouseMove;
+		document.onmouseout = handleMouseUp;
+        
+        drawScene();
+        tick();
+  }
+
+  function getShader(gl, id) {
+        var shaderScript = document.getElementById(id);
+        if (!shaderScript) { return null; }
+
+        var str = "";
+        var k = shaderScript.firstChild;
+        while (k) {
+            if (k.nodeType == 3) {
+                str += k.textContent;
+            }
+            k = k.nextSibling;
+        }
+
+        var shader;
+        if (shaderScript.type == "x-shader/x-fragment") {
+            shader = gl.createShader(gl.FRAGMENT_SHADER);
+        } else if (shaderScript.type == "x-shader/x-vertex") {
+            shader = gl.createShader(gl.VERTEX_SHADER);
+        } else {
+            return null;
+        }
+
+        gl.shaderSource(shader, str);
+        gl.compileShader(shader);
+
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            alert(gl.getShaderInfoLog(shader));
+            return null;
+        }
+        return shader;
+    }
+	// ---- GUI stuff
+	{
+  	var drag = false; var cmx, cmy;
+
+  	function handleMouseDown(event) {
+      var x = event.offsetX;
+      var y = 512-event.offsetY;
+      var i = Math.floor(y/512.0*M-.5);
+      var j = Math.floor(x/512.0*N-.5);
+      rf(i,j);
+    }
+  	function handleMouseMove(event) { }
+  	function handleKeyDown(event) { }
+  	function handleMouseUp(event) { }
+	}
+</script>
+</head>
+
+
+<body  style="background-color:black;" onload="webGLStart();">
+<canvas id="lesson01-canvas" style="border: none;" width="512" height="512" bg-color ="black"></canvas>
+</body>
+</html>
