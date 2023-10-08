@@ -1,45 +1,89 @@
 <html>
     <head>
         <title>Simulation Gallery</title>
+        <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+        <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     </head>
     <body>
             <h1>Simulation Gallery</h1>
+           
             
-            <h3> Six Vertex <h3>
-                <li> A <a href = "images/500CFTPendB.svg">configuration</a> of the six vertex model with domain wall boundary conditions (possibly Delta=0). (500x500 domain, slow to load.)</li>
-                <li> The derivative of the <a href = "images/N200Delta-3_2.png">height function</a> of the antiferromagnetic six vertex model with domain wall boundary conditions.</li>
+            <h2> Six Vertex Model </h2>
+                <p>
+                At each vertex of a domain of the square lattice of the square lattice one assigns an arrow to the adjacent edges (either up/down or left/right) such that the number of arrows pointing into the vertex equals the number pointing out. This constraint limits the number of configurations at a vertex to six, giving the model its name. Below are the six possible vertices drawn as both arrows and paths.
+                </p>
+                <img src="images/sixvertex.png" alt="The six vertices" width="600">
+                <p>
+                We will consider an \(N\times N\) square with domain wall boundary conditions, that is, the top and right boundaries are fully packed with paths while the bottom and left are empty.
+                </p>
+                <ul>
+                <li> A randomly sampled <a href = "images/Vadim6V1config.png">configuration</a> of the DWBC six vertex model of size \(N=250\) with \(a=1,b=2,c=2\).
+                <li> Here we draw only the  <a href = "images/6V1c.pdf">\(c\)-vertices</a>. </li>
+                <li> The derivative of the  <a href = "images/6V1hordensity.pdf">height function</a> with \(N=250\) and \(a=1,b=2,c=2\) averaged over 200 configurations. The curve in red is the theoretically predicted arctic curve. </li>
+                <li> The derivative of the <a href = "images/N200Delta-3_2.png">height function</a> of a single configuration with \(N=200\) and \(a=b=1,c=\sqrt{8}\).</li>
                 <li> The <a href = "images/N200Delta-3_facet_2.png">gaseous facet</a> of the above image.</li>
+                </ul>
             
-            <h3> Tilings <h3>
+            <h2> Tilings </h2>
                 <ul>
-                    <li> A <a href = "images/RandomTiling.svg">tiling</a> of the Aztec diamond.</li>
-                    <li> A <a href = "images/tilingAlmostHex.svg">tiling</a> of a partial hexagon.</li>
-                    <li> A <a href = "DominoMonomer.html">simulation</a> of a domino tilings of a checkerboard with a single monomer.</li>
-                    <li> A <a href = "images/t0.01color2.png">2-tiling</a> of the Aztec diamond. (See <a href = https://arxiv.org/abs/2202.06020>this paper<a/> for the definition of the interaction between the dominos of different tilings.)</li>
-                    <li> Another <a href = "images/t10color2.png">2-tiling</a> of the Aztec diamond.</li>
-                    <li> A larger (rank 256) <a href = "images/N256colors2DominoShuffle.png">2-tiling</a> of the Aztec diamond.</li>
-                    <li> The <a href = "images/t0AC128r.pdf">arctic curve</a> of one of the tilings of a 2-tiling of the Aztec diamond when the interaction strength is zero. (The arctic curve is the same for the other tiling.)</li>
+                    <li> A <a href = "images/RandomTiling.svg">domino tiling</a> of the Aztec diamond.</li>
+                    <li> A <a href = "images/tilingAlmostHex.svg">lozenge tiling</a> of a partial hexagon.</li>
+                </ul>
+                
+                
+            <h2> Coupled Tiling </h2>
+            <p>
+            We consider pairs of tilings of the Aztec diamond, color one blue and the other red.  We think of the tilings as being superimposed one on top of the other with an interaction whenever we see overlapping dominos of the form
+            </p>
+            <img src="images/interactions.png" alt="Domino interactions" width="400">
+            <p>
+            We assign a weight of \(t^{\text{# of interactions}}\) to each 2-tiling.
+            </p>
+            <ul>
+                <li> A <a href = "images/t0.01color2.png">2-tiling</a> of the Aztec diamond with \(t=0.01\). </li>
+                <li> Another <a href = "images/t10color2.png">2-tiling</a> with \(t=10\).</li>
+                <li> A larger, rank 256, <a href = "images/N256colors2t5.png">2-tiling</a> with \(t=5\).</li>
+                <li> The <a href = "images/t0AC128r.pdf">arctic curve</a> of one of the rank-128 tilings of a 2-tiling when the \(t=0\). (The arctic curve is the same for the other tiling.)</li>
+                <li> A rank-128 <a href = "images/2tilingloopst0.2.png">2-tiling</a> with \(t=0.2\) drawn as a collection of loops and double edges. </li>
+                <li> A rank-256 <a href = "images/2tilingloopst0.2N256.png">2-tiling</a> with \(t=0.2\) drawn as a collection of loops and double edges. </li>
+            </ul>
+            
+                
+            <h2> Box Ball </h2>
+            <p>
+            We consider a faulty box-ball system in which there is probability \(\varepsilon_p\) that a ball is not picked up by the carrier and probability \(\varepsilon_d\) that the ball is not dropped from the carrier. Define a vector of inter-ball spacings as shown below:
+            </p>
+            <img src="images/boxballspacing.png" alt="Box-ball spacings" width="600">
+            <p>
+            In the above, we have a 4-ball system with spacing vector \(X=(X_1,X_2,X_3)\).
+            </p>
+                <ul>
+                    <li> The spacings in a <a href = "images/3ballspacing.gif">3-ball system</a> with \(\varepsilon_p=\frac{1}{2},\varepsilon_d=0\) ran for \(10,000\) steps.   </li>
+                    <li> The spacings in a <a href = "images/4ballspacing.gif">4-ball system</a>  with \(\varepsilon_p=\frac{1}{2},\varepsilon_d=0\) ran for \(10,000\) steps.   </li>
+                    <li> The spacings in a <a href = "images/3ballspacing0.50.5.gif">3-ball system</a> with \(\varepsilon_p=\frac{1}{2},\varepsilon_d=\frac{1}{2}\) ran for \(10,000\) steps.   </li>
+                    <li> The spacings in a <a href = "images/3ballspacing00.5.gif">3-ball system</a> with \(\varepsilon_p=0,\varepsilon_d=\frac{1}{2}\) ran for \(10,000\) steps.   </li>
+                </ul>
+                
+                
+            <h2> Oscillating Tableaux </h2>
+                <ul>
+                    <li> A <a href = "OscillatingTableaux.html">simulation</a> of a large oscillating tableaux.</li>
                 </ul>
             
             
-            <h3> Oscillating Tableaux <h3>
-                <ul>
-                  <li> A <a href = "OscillatingTableaux.html">simulation</a> of a large oscillating tableaux.</li>
-                </ul>
-            
-            <h3> Ising Model <h3>
-                <ul>
-                    <li> <a href = "images/Kawasaki_50x50_BJp55_rp4.gif">Kawasaki Dynamics 1 </a> (50x50). </li>
-                    <li> <a href = "images/Kawasaki.gif">Kawasaki Dynamics 2.</a> </li>
-                </ul>
-            
-            <h3> Bounded Lecture Hall Tableaux <h3>
+            <h2> Bounded Lecture Hall Tableaux </h2>
                 <ul>
                     <li> Small <a href = "images/LHTsemicircle30.svg"> staircase partition. </a>  </li>
                     <li> Large <a href = "images/LHTcircle120.svg"> rectangle partition. </a>  </li>
                     <li> Limit shape with a <a href = "images/LHTcuspleft120.svg"> cusp. </a>  </li>
                 </ul>
             
+            
+            <h2> Ising Model </h2>
+            <ul>
+                <li> <a href = "images/Kawasaki_50x50_BJp55_rp4.gif">Kawasaki Dynamics 1 </a> (50x50). </li>
+                <li> <a href = "images/Kawasaki.gif">Kawasaki Dynamics 2.</a> </li>
+            </ul>
             
             </body>
 </html>
